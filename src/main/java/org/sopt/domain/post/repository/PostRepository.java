@@ -5,30 +5,16 @@ import java.util.List;
 import java.util.Optional;
 import org.sopt.domain.post.entity.Post;
 
-public class PostRepository {
-  private final List<Post> postList = new ArrayList<>();
-  private Long nextId = 1L;
 
-  public Post save(Post post) {
-    postList.add(post);
-    return post;
-  }
+public interface PostRepository {
 
-  public List<Post> findAll() {
-    return postList;
-  }
+  Post save(Post post);
 
-  public Optional<Post> findById(Long id) {  // null 대신 Optional
-    return postList.stream()
-        .filter(p -> p.getId().equals(id))
-        .findFirst();
-  }
+  List<Post> findAll();
 
-  public boolean deleteById(Long id) {
-    return postList.removeIf(p -> p.getId().equals(id));
-  }
+  Optional<Post> findById(Long id);
 
-  public Long generateId() {
-    return nextId++;
-  }
+  boolean deleteById(Long id);
+
+  Long generateId();
 }

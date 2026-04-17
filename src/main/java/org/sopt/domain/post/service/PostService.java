@@ -14,8 +14,13 @@ import org.springframework.stereotype.Service;
 
 @Service
 public class PostService {
-  private final PostRepository postRepository = new PostRepository();
-  private final PostValidator postValidator = new PostValidator();
+  private final PostRepository postRepository;
+  private final PostValidator postValidator;
+
+  public PostService(PostRepository postRepository, PostValidator postValidator) {
+    this.postRepository = postRepository;
+    this.postValidator = postValidator;
+  }
 
   // CREATE - 게시글 생성
   public PostResponse createPost(CreatePostRequest request) {

@@ -4,7 +4,9 @@ import org.sopt.domain.post.dto.request.CreatePostRequest;
 import org.sopt.domain.post.dto.request.UpdatePostRequest;
 import org.sopt.domain.post.exception.PostException;
 import org.sopt.domain.post.exception.code.PostErrorCode;
+import org.springframework.stereotype.Component;
 
+@Component
 public class PostValidator {
 
   // 기존 PostService 안에 있던 제목/내용 검증을 여기로 뺀다.
