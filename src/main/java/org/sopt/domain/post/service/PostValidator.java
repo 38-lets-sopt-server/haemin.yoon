@@ -33,4 +33,11 @@ public class PostValidator {
       throw new PostException(PostErrorCode.POST_BAD_REQUEST);
     }
   }
+
+  // 잘못된 페이지 요청(page < 0 또는 size <= 0) 검증
+  public void validatePagination(int page, int size) {
+    if (page < 0 || size <= 0) { // page가 0보다 작거나 size가 0보다 작거나 같으면 잘못된 요청이므로 예외를 발생
+      throw new PostException(PostErrorCode.POST_INVALID_PAGINATION);
+    }
+  }
 }

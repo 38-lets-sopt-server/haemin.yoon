@@ -3,6 +3,7 @@ package org.sopt.domain.post.service;
 import java.time.LocalDateTime;
 import java.util.List;
 import org.sopt.domain.post.dto.request.UpdatePostRequest;
+import org.sopt.domain.post.dto.response.PostPageResponse;
 import org.sopt.domain.post.entity.Post;
 import org.sopt.domain.post.dto.request.CreatePostRequest;
 import org.sopt.domain.post.dto.response.PostResponse;
@@ -39,12 +40,63 @@ public class PostService {
   }
 
   // READ - 전체 조회
-  public List<PostResponse> getAllPosts() {
-    return postRepository.findAll()
+  public PostPageResponse getAllPosts(int page, int size) {
+    // 1. 페이지 요청 값 검증 (page >= 0, size >= 1)
+    postValidator.validatePagination(page, size);
+
+    // 2. 전체 게시글 조회 후 DTO로 변환
+    List<PostResponse> allPosts = postRepository.findAll()
         .stream()
         .map(PostResponse::from)
         .toList();
+
+    // 3. 전체 데이터 개수 및 총 페이지 수 계산
+    int totalElements = allPosts.size();
+    int totalPages = totalElements == 0 ? 0 : (int) Math.ceil((double) totalElements / size);
+
+    // 4. 현재 페이지에 해당하는 시작 인덱스 계산
+    int startIndex = page * size;
+
+    // 5. 요청한 페이지가 범위를 벗어난 경우 → 빈 리스트 반환
+    if (startIndex >= totalElements) {
+      return new PostPageResponse(
+          List.of(),
+          page,
+          size,
+          totalElements,
+          totalPages,
+          page == 0,
+          true
+      );
+    }
+
+    // 6. 현재 페이지의 마지막 인덱스 계산 (전체 범위를 넘지 않도록 보정)
+    int endIndex = Math.min(startIndex + size, totalElements);
+    // 7. 해당 페이지에 포함되는 게시글 목록 추출
+    List<PostResponse> pagedPosts = allPosts.subList(startIndex, endIndex);
+
+    // 8. 첫 페이지 여부, 마지막 페이지 여부 판단
+    boolean isFirst = page == 0;
+    boolean isLast = page >= totalPages - 1;
+
+    // 9. 페이지 정보 + 게시글 목록을 함께 응답 DTO로 반환
+    return new PostPageResponse(
+        pagedPosts,
+        page,
+        size,
+        totalElements,
+        totalPages,
+        isFirst,
+        isLast
+    );
   }
+//  // 기존 페이지 없이 전체 조회 코드
+//  public List<PostResponse> getAllPosts() {
+//    return postRepository.findAll()
+//        .stream()
+//        .map(PostResponse::from)
+//        .toList();
+//  }
 
   // READ - 단건 조회
   public PostResponse getPost(Long id) {

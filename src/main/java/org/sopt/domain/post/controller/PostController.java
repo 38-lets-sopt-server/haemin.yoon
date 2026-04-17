@@ -3,6 +3,7 @@ package org.sopt.domain.post.controller;
 import java.util.List;
 import org.sopt.domain.post.dto.request.CreatePostRequest;
 import org.sopt.domain.post.dto.request.UpdatePostRequest;
+import org.sopt.domain.post.dto.response.PostPageResponse;
 import org.sopt.domain.post.dto.response.PostResponse;
 import org.sopt.domain.post.exception.code.PostSuccessCode;
 import org.sopt.domain.post.service.PostService;
@@ -15,6 +16,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -39,14 +41,25 @@ public class PostController {
         .body(ApiResponse.onSuccess(PostSuccessCode.POST_CREATE_SUCCESS, response));
   }
 
-  // GET /posts
+  // GET /posts?page=0&size=10 (페이지 조회)
   @GetMapping
-  public ResponseEntity<ApiResponse<List<PostResponse>>> getAllPosts() {
-    List<PostResponse> response = postService.getAllPosts();
+  public ResponseEntity<ApiResponse<PostPageResponse>> getAllPosts(
+      @RequestParam(defaultValue = "0") int page,
+      @RequestParam(defaultValue = "10") int size
+  ) {
+    PostPageResponse response = postService.getAllPosts(page, size);
     return ResponseEntity
         .status(PostSuccessCode.POST_GET_ALL_SUCCESS.getHttpStatus())
         .body(ApiResponse.onSuccess(PostSuccessCode.POST_GET_ALL_SUCCESS, response));
   }
+//  // 기존 페이지 없이 전체 조회
+//  @GetMapping
+//  public ResponseEntity<ApiResponse<List<PostResponse>>> getAllPosts() {
+//    List<PostResponse> response = postService.getAllPosts();
+//    return ResponseEntity
+//        .status(PostSuccessCode.POST_GET_ALL_SUCCESS.getHttpStatus())
+//        .body(ApiResponse.onSuccess(PostSuccessCode.POST_GET_ALL_SUCCESS, response));
+//  }
 
   // GET /posts/{id}
   @GetMapping("/{id}")
