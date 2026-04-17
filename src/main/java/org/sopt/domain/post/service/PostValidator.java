@@ -1,37 +1,34 @@
-package org.sopt.service;
+package org.sopt.domain.post.service;
+
+import org.sopt.domain.post.dto.request.CreatePostRequest;
+import org.sopt.domain.post.dto.request.UpdatePostRequest;
+import org.sopt.domain.post.exception.PostException;
+import org.sopt.domain.post.exception.code.PostErrorCode;
 
 public class PostValidator {
 
   // 기존 PostService 안에 있던 제목/내용 검증을 여기로 뺀다.
 
-  // 게시글 생성 검증
-  public void validateCreate(String title, String content, String author) {
-    validateTitle(title);
-    validateContent(content);
-    validateAuthor(author);
-  }
-
-  // 게시글 수정 검증
-  public void validateUpdate(String title, String content) {
-    validateTitle(title);
-    validateContent(content);
-  }
-
-  private void validateTitle(String title) {
-    if (title == null || title.isBlank()) {
-      throw new IllegalArgumentException("제목은 필수입니다!");
+  // 생성 시 검증
+  public void validateCreateRequest(CreatePostRequest request) {
+    if (request.title() == null || request.title().isBlank()) {
+      throw new PostException(PostErrorCode.POST_BAD_REQUEST);
+    }
+    if (request.content() == null || request.content().isBlank()) {
+      throw new PostException(PostErrorCode.POST_BAD_REQUEST);
+    }
+    if (request.author() == null || request.author().isBlank()) {
+      throw new PostException(PostErrorCode.POST_BAD_REQUEST);
     }
   }
 
-  private void validateContent(String content) {
-    if (content == null || content.isBlank()) {
-      throw new IllegalArgumentException("내용은 필수입니다!");
+  // 수정 시 검증
+  public void validateUpdateRequest(UpdatePostRequest request) {
+    if (request.title() == null || request.title().isBlank()) {
+      throw new PostException(PostErrorCode.POST_BAD_REQUEST);
     }
-  }
-
-  private void validateAuthor(String author) {
-    if (author == null || author.isBlank()) {
-      throw new IllegalArgumentException("작성자는 필수입니다!");
+    if (request.content() == null || request.content().isBlank()) {
+      throw new PostException(PostErrorCode.POST_BAD_REQUEST);
     }
   }
 }

@@ -1,11 +1,12 @@
-package org.sopt.controller;
+package org.sopt.domain.post.controller;
 
 import java.util.List;
-import org.sopt.dto.request.CreatePostRequest;
-import org.sopt.dto.response.CreatePostResponse;
-import org.sopt.dto.response.PostResponse;
-import org.sopt.service.PostService;
-import org.springframework.http.HttpStatus;
+import org.sopt.domain.post.dto.request.CreatePostRequest;
+import org.sopt.domain.post.dto.request.UpdatePostRequest;
+import org.sopt.domain.post.dto.response.PostResponse;
+import org.sopt.domain.post.exception.code.PostSuccessCode;
+import org.sopt.domain.post.service.PostService;
+import org.sopt.global.response.ApiResponse;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -18,52 +19,66 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/posts")
-@RequiredArgsConstructor
 public class PostController {
 
   private final PostService postService;
 
-  // POST /posts ✅ 같이 구현
+  public PostController(PostService postService) {
+    this.postService = postService;
+  }
+
+  // POST /posts
   @PostMapping
-  public ResponseEntity<CreatePostResponse> createPost(
+  public ResponseEntity<ApiResponse<PostResponse>> createPost(
       @RequestBody CreatePostRequest request
   ) {
-    CreatePostResponse response = postService.createPost(request);
-    return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    PostResponse response = postService.createPost(request);
+
+    return ResponseEntity
+        .status(PostSuccessCode.POST_CREATE_SUCCESS.getHttpStatus())
+        .body(ApiResponse.onSuccess(PostSuccessCode.POST_CREATE_SUCCESS, response));
   }
 
-  // GET /posts 📝 과제
+  // GET /posts
   @GetMapping
-  public ResponseEntity<List<PostResponse>> getAllPosts() {
-    //TODO
-    return null;
+  public ResponseEntity<ApiResponse<List<PostResponse>>> getAllPosts() {
+    List<PostResponse> response = postService.getAllPosts();
+    return ResponseEntity
+        .status(PostSuccessCode.POST_GET_ALL_SUCCESS.getHttpStatus())
+        .body(ApiResponse.onSuccess(PostSuccessCode.POST_GET_ALL_SUCCESS, response));
   }
 
-  // GET /posts/{id} 📝 과제
+  // GET /posts/{id}
   @GetMapping("/{id}")
-  public ResponseEntity<PostResponse> getPost(
+  public ResponseEntity<ApiResponse<PostResponse>> getPost(
       @PathVariable Long id
   ) {
-    //TODO
-    return null;
+    PostResponse response = postService.getPost(id);
+    return ResponseEntity
+        .status(PostSuccessCode.POST_GET_SUCCESS.getHttpStatus())
+        .body(ApiResponse.onSuccess(PostSuccessCode.POST_GET_SUCCESS, response));
   }
 
-  // PUT /posts/{id} 📝 과제
+  // PUT /posts/{id}
   @PutMapping("/{id}")
-  public ResponseEntity<Void> updatePost(
+  public ResponseEntity<ApiResponse<Void>> updatePost(
       @PathVariable Long id,
       @RequestBody UpdatePostRequest request
   ) {
-    //TODO
-    return null;
+    postService.updatePost(id, request);
+    return ResponseEntity
+        .status(PostSuccessCode.POST_UPDATE_SUCCESS.getHttpStatus())
+        .body(ApiResponse.onSuccess(PostSuccessCode.POST_UPDATE_SUCCESS, null));
   }
 
-  // DELETE /posts/{id} 📝 과제
+  // DELETE /posts/{id}
   @DeleteMapping("/{id}")
-  public ResponseEntity<Void> deletePost(
+  public ResponseEntity<ApiResponse<Void>> deletePost(
       @PathVariable Long id
   ) {
-    //TODO
-    return null;
+    postService.deletePost(id);
+    return ResponseEntity
+        .status(PostSuccessCode.POST_DELETE_SUCCESS.getHttpStatus())
+        .body(ApiResponse.onSuccess(PostSuccessCode.POST_DELETE_SUCCESS, null));
   }
 }

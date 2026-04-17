@@ -1,86 +1,70 @@
-package org.sopt.service;
+package org.sopt.domain.post.service;
 
+import java.time.LocalDateTime;
 import java.util.List;
-import java.util.stream.Collectors;
-import org.sopt.domain.Post;
-import org.sopt.dto.request.CreatePostRequest;
-import org.sopt.dto.response.CreatePostResponse;
-import org.sopt.dto.response.PostResponse;
-import org.sopt.exception.PostNotFoundException;
-import org.sopt.repository.PostRepository;
+import org.sopt.domain.post.dto.request.UpdatePostRequest;
+import org.sopt.domain.post.entity.Post;
+import org.sopt.domain.post.dto.request.CreatePostRequest;
+import org.sopt.domain.post.dto.response.PostResponse;
+import org.sopt.domain.post.exception.PostException;
+import org.sopt.domain.post.exception.code.PostErrorCode;
+import org.sopt.domain.post.repository.PostRepository;
+import org.sopt.domain.post.exception.PostNotFoundException;
+import org.springframework.stereotype.Service;
 
+@Service
 public class PostService {
   private final PostRepository postRepository = new PostRepository();
   private final PostValidator postValidator = new PostValidator();
 
-  // CREATE
-  public CreatePostResponse createPost(CreatePostRequest request) {
-//    if (request.title == null || request.title.isBlank()) {
-//      throw new IllegalArgumentException("제목은 필수입니다!");
-//    }
-//    if (request.content == null || request.content.isBlank()) {
-//      throw new IllegalArgumentException("내용은 필수입니다!");
-//    }
-    // 예외 처리 함수로 대체
-    postValidator.validateCreate(request.title, request.content, request.author);
+  // CREATE - 게시글 생성
+  public PostResponse createPost(CreatePostRequest request) {
+    postValidator.validateCreateRequest(request); // 예외 검증 처리
 
-    String createdAt = java.time.LocalDateTime.now().toString();
-    Post post = new Post(postRepository.generateId(), request.title, request.content, request.author, createdAt);
+    Post post = new Post(
+        postRepository.generateId(),
+        request.title(),
+        request.content(),
+        request.author(),
+        LocalDateTime.now().toString()
+    );
+
     postRepository.save(post);
-    return new CreatePostResponse(post.getId(), "게시글 등록 완료!");
+    return PostResponse.from(post);
   }
 
-  // READ - 전체 📝 과제
+  // READ - 전체 조회
   public List<PostResponse> getAllPosts() {
-    // TODO
     return postRepository.findAll()
         .stream()
-        .map(PostResponse::new)
-        .collect(Collectors.toList());
+        .map(PostResponse::from)
+        .toList();
   }
 
-  // READ - 단건 📝 과제
+  // READ - 단건 조회
   public PostResponse getPost(Long id) {
-    Post post = postRepository.findById(id);
+    Post post = postRepository.findById(id)
+        .orElseThrow(() -> new PostException(PostErrorCode.POST_NOT_FOUND));
 
-    if (post == null) {
-      // throw new IllegalArgumentException("해당 ID의 게시글이 존재하지 않습니다.");
-      throw new PostNotFoundException(id);
-    }
-
-    return new PostResponse(post);
+    return PostResponse.from(post);
   }
 
-  // UPDATE 📝 과제
-  public void updatePost(Long id, String newTitle, String newContent) {
-    Post post = postRepository.findById(id);
-    if (post == null) {
-      throw new PostNotFoundException(id);
-    }
+  // UPDATE - 수정
+  public void updatePost(Long id, UpdatePostRequest request) {
+    postValidator.validateUpdateRequest(request); // 예외 검증
 
-//    if (post == null) {
-//      throw new IllegalArgumentException("해당 ID의 게시글이 존재하지 않습니다.");
-//    }
-//    if (newTitle == null || newTitle.isBlank()) {
-//      throw new IllegalArgumentException("제목은 비어 있을 수 없습니다.");
-//    }
-//    if (newContent == null || newContent.isBlank()) {
-//      throw new IllegalArgumentException("내용은 비어 있을 수 없습니다.");
-//    }
-    // 예외 검증 함수로 대체
-    postValidator.validateUpdate(newTitle, newContent);
-    post.update(newTitle, newContent);
+    Post post = postRepository.findById(id)
+        .orElseThrow(() -> new PostException(PostErrorCode.POST_NOT_FOUND));
+
+    post.update(request.title(), request.content());
   }
 
-  // DELETE 📝 과제
+  // DELETE - 삭제
   public void deletePost(Long id) {
-    Post post = postRepository.findById(id);
+    Post post = postRepository.findById(id)
+        //.orElseThrow(() -> new PostException(PostErrorCode.POST_NOT_FOUND));
+        .orElseThrow(PostNotFoundException::new);
 
-    if (post == null) {
-      // throw new IllegalArgumentException("해당 ID의 게시글이 존재하지 않습니다.");
-      throw new PostNotFoundException(id);
-    }
-
-    postRepository.deleteById(id);
+    postRepository.deleteById(post.getId());
   }
 }

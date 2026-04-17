@@ -1,9 +1,9 @@
-package org.sopt.repository;
+package org.sopt.domain.post.repository;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import org.sopt.domain.Post;
+import org.sopt.domain.post.entity.Post;
 
 public class PostRepository {
   private final List<Post> postList = new ArrayList<>();

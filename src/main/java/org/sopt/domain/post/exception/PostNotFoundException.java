@@ -1,7 +1,10 @@
-package org.sopt.exception;
+package org.sopt.domain.post.exception;
 
-public class PostNotFoundException extends RuntimeException {
-  public PostNotFoundException(Long id) {
-    super("해당 ID의 게시글이 존재하지 않습니다. id=" + id);
+import org.sopt.domain.post.exception.code.PostErrorCode;
+import org.sopt.global.exception.CustomException;
+
+public class PostNotFoundException extends CustomException {
+  public PostNotFoundException() {
+    super(PostErrorCode.POST_NOT_FOUND);
   }
 }
