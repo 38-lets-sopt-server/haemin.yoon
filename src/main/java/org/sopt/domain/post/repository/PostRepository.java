@@ -2,6 +2,7 @@ package org.sopt.repository;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import org.sopt.domain.Post;
 
 public class PostRepository {
@@ -17,11 +18,10 @@ public class PostRepository {
     return postList;
   }
 
-  public Post findById(Long id) {
+  public Optional<Post> findById(Long id) {  // null 대신 Optional
     return postList.stream()
         .filter(p -> p.getId().equals(id))
-        .findFirst()
-        .orElse(null);
+        .findFirst();
   }
 
   public boolean deleteById(Long id) {
