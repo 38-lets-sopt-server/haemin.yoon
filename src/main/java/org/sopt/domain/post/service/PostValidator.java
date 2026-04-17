@@ -14,23 +14,26 @@ public class PostValidator {
   // 생성 시 검증
   public void validateCreateRequest(CreatePostRequest request) {
     if (request.title() == null || request.title().isBlank()) {
-      throw new PostException(PostErrorCode.POST_BAD_REQUEST);
+      throw new PostException(PostErrorCode.POST_TITLE_REQUIRED);
     }
     if (request.content() == null || request.content().isBlank()) {
-      throw new PostException(PostErrorCode.POST_BAD_REQUEST);
+      throw new PostException(PostErrorCode.POST_CONTENT_REQUIRED);
     }
     if (request.author() == null || request.author().isBlank()) {
-      throw new PostException(PostErrorCode.POST_BAD_REQUEST);
+      throw new PostException(PostErrorCode.POST_AUTHOR_REQUIRED);
+    }
+    if (request.boardType() == null) { // 타입 검증 추가
+      throw new PostException(PostErrorCode.POST_BOARD_TYPE_REQUIRED);
     }
   }
 
   // 수정 시 검증
   public void validateUpdateRequest(UpdatePostRequest request) {
     if (request.title() == null || request.title().isBlank()) {
-      throw new PostException(PostErrorCode.POST_BAD_REQUEST);
+      throw new PostException(PostErrorCode.POST_TITLE_REQUIRED);
     }
     if (request.content() == null || request.content().isBlank()) {
-      throw new PostException(PostErrorCode.POST_BAD_REQUEST);
+      throw new PostException(PostErrorCode.POST_CONTENT_REQUIRED);
     }
   }
 

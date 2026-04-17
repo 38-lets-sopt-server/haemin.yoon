@@ -4,6 +4,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import org.sopt.domain.post.dto.request.UpdatePostRequest;
 import org.sopt.domain.post.dto.response.PostPageResponse;
+import org.sopt.domain.post.entity.BoardType;
 import org.sopt.domain.post.entity.Post;
 import org.sopt.domain.post.dto.request.CreatePostRequest;
 import org.sopt.domain.post.dto.response.PostResponse;
@@ -32,7 +33,8 @@ public class PostService {
         request.title(),
         request.content(),
         request.author(),
-        LocalDateTime.now().toString()
+        LocalDateTime.now().toString(),
+        request.boardType()
     );
 
     postRepository.save(post);
@@ -97,6 +99,48 @@ public class PostService {
 //        .map(PostResponse::from)
 //        .toList();
 //  }
+
+  // READ - 게시글 종류별 전체 조회
+  public PostPageResponse getPostsByBoardType(BoardType boardType, int page, int size) {
+    postValidator.validatePagination(page, size);
+
+    List<PostResponse> filteredPosts = postRepository.findAllByBoardType(boardType)
+        .stream()
+        .map(PostResponse::from)
+        .toList();
+
+    int totalElements = filteredPosts.size();
+    int totalPages = totalElements == 0 ? 0 : (int) Math.ceil((double) totalElements / size);
+    int startIndex = page * size;
+
+    if (startIndex >= totalElements) {
+      return new PostPageResponse(
+          List.of(),
+          page,
+          size,
+          totalElements,
+          totalPages,
+          page == 0,
+          true
+      );
+    }
+
+    int endIndex = Math.min(startIndex + size, totalElements);
+    List<PostResponse> pagedPosts = filteredPosts.subList(startIndex, endIndex);
+
+    boolean isFirst = page == 0;
+    boolean isLast = page >= totalPages - 1;
+
+    return new PostPageResponse(
+        pagedPosts,
+        page,
+        size,
+        totalElements,
+        totalPages,
+        isFirst,
+        isLast
+    );
+  }
 
   // READ - 단건 조회
   public PostResponse getPost(Long id) {

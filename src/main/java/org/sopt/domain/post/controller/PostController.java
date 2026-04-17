@@ -5,6 +5,7 @@ import org.sopt.domain.post.dto.request.CreatePostRequest;
 import org.sopt.domain.post.dto.request.UpdatePostRequest;
 import org.sopt.domain.post.dto.response.PostPageResponse;
 import org.sopt.domain.post.dto.response.PostResponse;
+import org.sopt.domain.post.entity.BoardType;
 import org.sopt.domain.post.exception.code.PostSuccessCode;
 import org.sopt.domain.post.service.PostService;
 import org.sopt.global.response.ApiResponse;
@@ -60,6 +61,20 @@ public class PostController {
 //        .status(PostSuccessCode.POST_GET_ALL_SUCCESS.getHttpStatus())
 //        .body(ApiResponse.onSuccess(PostSuccessCode.POST_GET_ALL_SUCCESS, response));
 //  }
+
+  // GET /posts/board?boardType=FREE&page=0&size=10
+  @GetMapping("/board")
+  public ResponseEntity<ApiResponse<PostPageResponse>> getPostsByBoardType(
+      @RequestParam BoardType boardType,
+      @RequestParam(defaultValue = "0") int page,
+      @RequestParam(defaultValue = "10") int size
+  ) {
+    PostPageResponse response = postService.getPostsByBoardType(boardType, page, size);
+
+    return ResponseEntity
+        .status(PostSuccessCode.POST_GET_ALL_SUCCESS.getHttpStatus())
+        .body(ApiResponse.onSuccess(PostSuccessCode.POST_GET_ALL_SUCCESS, response));
+  }
 
   // GET /posts/{id}
   @GetMapping("/{id}")
