@@ -1,6 +1,8 @@
 package org.sopt.domain.post.controller;
 
-import java.util.List;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import org.sopt.domain.post.dto.request.CreatePostRequest;
 import org.sopt.domain.post.dto.request.UpdatePostRequest;
 import org.sopt.domain.post.dto.response.PostPageResponse;
@@ -8,7 +10,10 @@ import org.sopt.domain.post.dto.response.PostResponse;
 import org.sopt.domain.post.entity.BoardType;
 import org.sopt.domain.post.exception.code.PostSuccessCode;
 import org.sopt.domain.post.service.PostService;
-import org.sopt.global.response.ApiResponse;
+import org.sopt.global.response.BaseResponse;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -20,8 +25,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+@Tag(name = "Post", description = "게시글 관련 API")
 @RestController
-@RequestMapping("/posts")
+@RequestMapping("/api/v1/posts")
 public class PostController {
 
   private final PostService postService;
@@ -30,83 +36,61 @@ public class PostController {
     this.postService = postService;
   }
 
-  // POST /posts
+  @Operation(summary = "게시글 생성", description = "userId를 받아 새로운 게시글을 작성합니다.")
   @PostMapping
-  public ResponseEntity<ApiResponse<PostResponse>> createPost(
-      @RequestBody CreatePostRequest request
+  public ResponseEntity<BaseResponse<PostResponse>> createPost(
+      @Valid @RequestBody CreatePostRequest request
   ) {
     PostResponse response = postService.createPost(request);
 
     return ResponseEntity
         .status(PostSuccessCode.POST_CREATE_SUCCESS.getHttpStatus())
-        .body(ApiResponse.onSuccess(PostSuccessCode.POST_CREATE_SUCCESS, response));
+        .body(BaseResponse.onSuccess(PostSuccessCode.POST_CREATE_SUCCESS, response));
   }
 
-  // GET /posts?page=0&size=10 (페이지 조회)
+  @Operation(summary = "전체 게시글 조회(페이징)", description = "페이지 번호와 사이즈를 받아 전체 게시글을 조회합니다.")
   @GetMapping
-  public ResponseEntity<ApiResponse<PostPageResponse>> getAllPosts(
-      @RequestParam(defaultValue = "0") int page,
-      @RequestParam(defaultValue = "10") int size
+  public ResponseEntity<BaseResponse<PostPageResponse>> getAllPosts(
+      @RequestParam(required = false) BoardType boardType,
+      @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
   ) {
-    PostPageResponse response = postService.getAllPosts(page, size);
+    PostPageResponse response = postService.getPosts(boardType, pageable);
     return ResponseEntity
         .status(PostSuccessCode.POST_GET_ALL_SUCCESS.getHttpStatus())
-        .body(ApiResponse.onSuccess(PostSuccessCode.POST_GET_ALL_SUCCESS, response));
-  }
-//  // 기존 페이지 없이 전체 조회
-//  @GetMapping
-//  public ResponseEntity<ApiResponse<List<PostResponse>>> getAllPosts() {
-//    List<PostResponse> response = postService.getAllPosts();
-//    return ResponseEntity
-//        .status(PostSuccessCode.POST_GET_ALL_SUCCESS.getHttpStatus())
-//        .body(ApiResponse.onSuccess(PostSuccessCode.POST_GET_ALL_SUCCESS, response));
-//  }
-
-  // GET /posts/board?boardType=FREE&page=0&size=10
-  @GetMapping("/board")
-  public ResponseEntity<ApiResponse<PostPageResponse>> getPostsByBoardType(
-      @RequestParam BoardType boardType,
-      @RequestParam(defaultValue = "0") int page,
-      @RequestParam(defaultValue = "10") int size
-  ) {
-    PostPageResponse response = postService.getPostsByBoardType(boardType, page, size);
-
-    return ResponseEntity
-        .status(PostSuccessCode.POST_GET_ALL_SUCCESS.getHttpStatus())
-        .body(ApiResponse.onSuccess(PostSuccessCode.POST_GET_ALL_SUCCESS, response));
+        .body(BaseResponse.onSuccess(PostSuccessCode.POST_GET_ALL_SUCCESS, response));
   }
 
-  // GET /posts/{id}
+  @Operation(summary = "게시글 단건 조회", description = "ID를 통해 특정 게시글을 조회합니다.")
   @GetMapping("/{id}")
-  public ResponseEntity<ApiResponse<PostResponse>> getPost(
+  public ResponseEntity<BaseResponse<PostResponse>> getPost(
       @PathVariable Long id
   ) {
     PostResponse response = postService.getPost(id);
     return ResponseEntity
         .status(PostSuccessCode.POST_GET_SUCCESS.getHttpStatus())
-        .body(ApiResponse.onSuccess(PostSuccessCode.POST_GET_SUCCESS, response));
+        .body(BaseResponse.onSuccess(PostSuccessCode.POST_GET_SUCCESS, response));
   }
 
-  // PUT /posts/{id}
+  @Operation(summary = "게시글 수정", description = "기존 게시글의 제목과 내용을 수정합니다.")
   @PutMapping("/{id}")
-  public ResponseEntity<ApiResponse<Void>> updatePost(
+  public ResponseEntity<BaseResponse<PostResponse>> updatePost(
       @PathVariable Long id,
-      @RequestBody UpdatePostRequest request
+      @Valid @RequestBody UpdatePostRequest request
   ) {
-    postService.updatePost(id, request);
+    PostResponse response = postService.updatePost(id, request);
     return ResponseEntity
         .status(PostSuccessCode.POST_UPDATE_SUCCESS.getHttpStatus())
-        .body(ApiResponse.onSuccess(PostSuccessCode.POST_UPDATE_SUCCESS, null));
+        .body(BaseResponse.onSuccess(PostSuccessCode.POST_UPDATE_SUCCESS, response));
   }
 
-  // DELETE /posts/{id}
+  @Operation(summary = "게시글 삭제", description = "게시글을 삭제합니다.")
   @DeleteMapping("/{id}")
-  public ResponseEntity<ApiResponse<Void>> deletePost(
+  public ResponseEntity<BaseResponse<Void>> deletePost(
       @PathVariable Long id
   ) {
     postService.deletePost(id);
     return ResponseEntity
         .status(PostSuccessCode.POST_DELETE_SUCCESS.getHttpStatus())
-        .body(ApiResponse.onSuccess(PostSuccessCode.POST_DELETE_SUCCESS, null));
+        .body(BaseResponse.onSuccess(PostSuccessCode.POST_DELETE_SUCCESS, null));
   }
 }

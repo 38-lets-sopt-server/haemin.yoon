@@ -1,6 +1,5 @@
 package org.sopt.domain.post.service;
 
-import java.time.LocalDateTime;
 import java.util.List;
 import org.sopt.domain.post.dto.request.UpdatePostRequest;
 import org.sopt.domain.post.dto.response.PostPageResponse;
@@ -11,138 +10,69 @@ import org.sopt.domain.post.dto.response.PostResponse;
 import org.sopt.domain.post.exception.PostException;
 import org.sopt.domain.post.exception.code.PostErrorCode;
 import org.sopt.domain.post.repository.PostRepository;
-import org.sopt.domain.post.exception.PostNotFoundException;
+import org.sopt.domain.user.entity.User;
+import org.sopt.domain.user.repository.UserRepository;
+import org.sopt.global.exception.CustomException;
+import org.sopt.global.exception.code.GlobalErrorCode;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class PostService {
   private final PostRepository postRepository;
-  private final PostValidator postValidator;
+  private final UserRepository userRepository;
 
-  public PostService(PostRepository postRepository, PostValidator postValidator) {
+  public PostService(PostRepository postRepository, UserRepository userRepository) {
     this.postRepository = postRepository;
-    this.postValidator = postValidator;
+    this.userRepository = userRepository;
   }
 
   // CREATE - 게시글 생성
+  @Transactional  // 저장 → DB 변경 발생 → 트랜잭션 커밋 시 반영
   public PostResponse createPost(CreatePostRequest request) {
-    postValidator.validateCreateRequest(request); // 예외 검증 처리
+    // 1. 작성자 존재 여부 확인
+    User user = userRepository.findById(request.userId())
+        .orElseThrow(() -> new CustomException(GlobalErrorCode.COMMON_BAD_REQUEST));
 
     Post post = new Post(
-        postRepository.generateId(),
+        null, // ID는 DB에서 자동 생성(IDENTITY)
         request.title(),
         request.content(),
-        request.author(),
-        LocalDateTime.now().toString(),
+        user,
         request.boardType()
     );
 
-    postRepository.save(post);
-    return PostResponse.from(post);
+    Post savedPost = postRepository.save(post);
+    return PostResponse.from(savedPost);
   }
 
-  // READ - 전체 조회
-  public PostPageResponse getAllPosts(int page, int size) {
-    // 1. 페이지 요청 값 검증 (page >= 0, size >= 1)
-    postValidator.validatePagination(page, size);
+  // READ - 전체 조회 (boardtype 없으면 전체 조회, 있으면 해당 타입의 게시글 전체조회)
+  // Pageable은 컨트롤러에서 Spring이 만들어주고, Repository에 그대로 넘겨 DB 레벨에서 정렬/페이징 처리
+  @Transactional(readOnly = true)
+  public PostPageResponse getPosts(BoardType boardType, Pageable pageable) {
+    Page<Post> postPage = (boardType != null)
+        ? postRepository.findAllByBoardTypeWithUser(boardType, pageable)
+        : postRepository.findAll(pageable);
 
-    // 2. 전체 게시글 조회 후 DTO로 변환
-    List<PostResponse> allPosts = postRepository.findAll()
-        .stream()
+    List<PostResponse> content = postPage.getContent().stream()
         .map(PostResponse::from)
         .toList();
 
-    // 3. 전체 데이터 개수 및 총 페이지 수 계산
-    int totalElements = allPosts.size();
-    int totalPages = totalElements == 0 ? 0 : (int) Math.ceil((double) totalElements / size);
-
-    // 4. 현재 페이지에 해당하는 시작 인덱스 계산
-    int startIndex = page * size;
-
-    // 5. 요청한 페이지가 범위를 벗어난 경우 → 빈 리스트 반환
-    if (startIndex >= totalElements) {
-      return new PostPageResponse(
-          List.of(),
-          page,
-          size,
-          totalElements,
-          totalPages,
-          page == 0,
-          true
-      );
-    }
-
-    // 6. 현재 페이지의 마지막 인덱스 계산 (전체 범위를 넘지 않도록 보정)
-    int endIndex = Math.min(startIndex + size, totalElements);
-    // 7. 해당 페이지에 포함되는 게시글 목록 추출
-    List<PostResponse> pagedPosts = allPosts.subList(startIndex, endIndex);
-
-    // 8. 첫 페이지 여부, 마지막 페이지 여부 판단
-    boolean isFirst = page == 0;
-    boolean isLast = page >= totalPages - 1;
-
-    // 9. 페이지 정보 + 게시글 목록을 함께 응답 DTO로 반환
     return new PostPageResponse(
-        pagedPosts,
-        page,
-        size,
-        totalElements,
-        totalPages,
-        isFirst,
-        isLast
-    );
-  }
-//  // 기존 페이지 없이 전체 조회 코드
-//  public List<PostResponse> getAllPosts() {
-//    return postRepository.findAll()
-//        .stream()
-//        .map(PostResponse::from)
-//        .toList();
-//  }
-
-  // READ - 게시글 종류별 전체 조회
-  public PostPageResponse getPostsByBoardType(BoardType boardType, int page, int size) {
-    postValidator.validatePagination(page, size);
-
-    List<PostResponse> filteredPosts = postRepository.findAllByBoardType(boardType)
-        .stream()
-        .map(PostResponse::from)
-        .toList();
-
-    int totalElements = filteredPosts.size();
-    int totalPages = totalElements == 0 ? 0 : (int) Math.ceil((double) totalElements / size);
-    int startIndex = page * size;
-
-    if (startIndex >= totalElements) {
-      return new PostPageResponse(
-          List.of(),
-          page,
-          size,
-          totalElements,
-          totalPages,
-          page == 0,
-          true
-      );
-    }
-
-    int endIndex = Math.min(startIndex + size, totalElements);
-    List<PostResponse> pagedPosts = filteredPosts.subList(startIndex, endIndex);
-
-    boolean isFirst = page == 0;
-    boolean isLast = page >= totalPages - 1;
-
-    return new PostPageResponse(
-        pagedPosts,
-        page,
-        size,
-        totalElements,
-        totalPages,
-        isFirst,
-        isLast
+        content,
+        postPage.getNumber(),
+        postPage.getSize(),
+        (int) postPage.getTotalElements(),
+        postPage.getTotalPages(),
+        postPage.isFirst(),
+        postPage.isLast()
     );
   }
 
   // READ - 단건 조회
+  @Transactional(readOnly = true)  // 조회 전용 → 더티 체킹 안 함
   public PostResponse getPost(Long id) {
     Post post = postRepository.findById(id)
         .orElseThrow(() -> new PostException(PostErrorCode.POST_NOT_FOUND));
@@ -151,20 +81,20 @@ public class PostService {
   }
 
   // UPDATE - 수정
-  public void updatePost(Long id, UpdatePostRequest request) {
-    postValidator.validateUpdateRequest(request); // 예외 검증
-
+  @Transactional
+  public PostResponse updatePost(Long id, UpdatePostRequest request) {
     Post post = postRepository.findById(id)
         .orElseThrow(() -> new PostException(PostErrorCode.POST_NOT_FOUND));
 
     post.update(request.title(), request.content());
+    return PostResponse.from(post);
   }
 
   // DELETE - 삭제
+  @Transactional
   public void deletePost(Long id) {
     Post post = postRepository.findById(id)
-        //.orElseThrow(() -> new PostException(PostErrorCode.POST_NOT_FOUND));
-        .orElseThrow(PostNotFoundException::new);
+        .orElseThrow(() -> new PostException(PostErrorCode.POST_NOT_FOUND));
 
     postRepository.deleteById(post.getId());
   }
