@@ -1,23 +1,18 @@
 package org.sopt.domain.post.repository;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
 import org.sopt.domain.post.entity.BoardType;
 import org.sopt.domain.post.entity.Post;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+import org.springframework.stereotype.Repository;
 
+@Repository
+public interface PostRepository extends JpaRepository<Post, Long> {
 
-public interface PostRepository {
-
-  Post save(Post post);
-
-  List<Post> findAll();
-
-  List<Post> findAllByBoardType(BoardType boardType);
-
-  Optional<Post> findById(Long id);
-
-  boolean deleteById(Long id);
-
-  Long generateId();
+  // 특정 게시판 타입의 글들을 조회하는 메서드
+  @Query("select p from Post p join fetch p.user where p.boardType = :boardType")
+  Page<Post> findAllByBoardTypeWithUser(@Param("boardType") BoardType boardType, Pageable pageable);
 }
