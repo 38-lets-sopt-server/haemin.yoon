@@ -1,8 +1,10 @@
 package org.sopt.global.exception;
 
+import jakarta.validation.ConstraintViolationException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import org.sopt.domain.like.exception.code.LikeErrorCode;
 import org.sopt.domain.post.exception.code.PostErrorCode;
 import org.sopt.global.exception.code.BaseErrorCode;
 import org.sopt.global.exception.code.GlobalErrorCode;
@@ -33,6 +35,23 @@ public class GlobalExceptionHandler {
         .body(BaseResponse.onFailure("COMMON5001", "서버 에러가 발생했습니다."));
   }
 
+  // @RequestParam, @PathVariable 등에 붙은 제약 어노테이션 위반 시 발생
+  // @RequestBody의 @Valid → MethodArgumentNotValidException과 다른 예외임에 주의
+  @ExceptionHandler(ConstraintViolationException.class)
+  public ResponseEntity<BaseResponse<Void>> handleConstraintViolationException(ConstraintViolationException e) {
+    String message = e.getConstraintViolations().iterator().next().getMessage();
+    BaseErrorCode errorCode = findErrorCodeByMessage(message);
+
+    if (errorCode != null) {
+      return ResponseEntity
+          .status(errorCode.getHttpStatus())
+          .body(BaseResponse.onFailure(errorCode.getCode(), errorCode.getMessage()));
+    }
+    return ResponseEntity
+        .status(HttpStatus.BAD_REQUEST)
+        .body(BaseResponse.onFailure("COMMON4001", message));
+  }
+
   @ExceptionHandler(MethodArgumentNotValidException.class)
   public ResponseEntity<BaseResponse<Void>> handleMethodArgumentNotValidException(MethodArgumentNotValidException e) {
     // 1. DTO에서 터진 에러 메시지 추출
@@ -58,7 +77,7 @@ public class GlobalExceptionHandler {
 
   static {
     // 애플리케이션 실행 시 딱 한 번만 모든 메시지를 맵에 담아둠
-    List<Class<? extends BaseErrorCode>> enums = List.of(PostErrorCode.class, GlobalErrorCode.class);
+    List<Class<? extends BaseErrorCode>> enums = List.of(PostErrorCode.class, LikeErrorCode.class, GlobalErrorCode.class);
     for (Class<? extends BaseErrorCode> enumClass : enums) {
       for (BaseErrorCode code : enumClass.getEnumConstants()) {
         errorCodeMap.put(code.getMessage(), code);

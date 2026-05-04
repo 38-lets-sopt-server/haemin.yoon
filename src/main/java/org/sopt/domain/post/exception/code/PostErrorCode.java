@@ -11,7 +11,8 @@ public enum PostErrorCode implements BaseErrorCode {
   POST_TITLE_REQUIRED(HttpStatus.BAD_REQUEST, "POST4001", "제목은 필수 입력 항목입니다."),
   POST_CONTENT_REQUIRED(HttpStatus.BAD_REQUEST, "POST4002", "내용을 입력해주세요."),
   POST_AUTHOR_REQUIRED(HttpStatus.BAD_REQUEST, "POST4003", "작성자 ID는 필수입니다."),
-  POST_BOARD_TYPE_REQUIRED(HttpStatus.BAD_REQUEST, "POST4004", "게시판 종류는 필수입니다.");
+  POST_BOARD_TYPE_REQUIRED(HttpStatus.BAD_REQUEST, "POST4004", "게시판 종류는 필수입니다."),
+  POST_SEARCH_KEYWORD_REQUIRED(HttpStatus.BAD_REQUEST, "POST4005", "검색어를 입력해주세요.");
 
   private final HttpStatus httpStatus;
   private final String code;
