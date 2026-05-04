@@ -10,31 +10,43 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Version;
 import org.sopt.domain.user.entity.User;
 import org.sopt.global.entity.BaseTimeEntity;
 
 @Entity
 public class Post extends BaseTimeEntity {
 
-  @Id // 앞에서 배운 PK
+  @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   private Long id;
 
   @Column(nullable = false, length = 100)
-  private String title;     // 목록, 상세, 글쓰기 화면 — 제목
+  private String title;
 
   @Column(nullable = false, columnDefinition = "TEXT")
-  private String content;   // 목록(미리보기), 상세(전체) 화면 — 내용
+  private String content;
 
-  @ManyToOne(fetch = FetchType.LAZY)  // User : Post = 1 : N
-  @JoinColumn(name = "user_id")       // post 테이블에 user_id FK 컬럼 추가
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "user_id")
   private User user;
 
   @Enumerated(EnumType.STRING)
   @Column(nullable = false, length = 20)
-  private BoardType boardType; // 필드 추가
+  private BoardType boardType;
 
-  protected Post() {}  // JPA 기본 생성자
+  // 낙관적 락의 핵심: 커밋 시 UPDATE post SET version = ? WHERE id = ? AND version = ?
+  // 기댓값과 실제값이 다르면 OptimisticLockingFailureException 발생
+  @Version
+  @Column(columnDefinition = "BIGINT DEFAULT 0")
+  private Long version;
+
+  // 좋아요 수 비정규화 — 별도 COUNT 쿼리 없이 Post 조회만으로 응답 가능
+  // likeCount를 변경함으로써 version 체크가 트리거되어 동시성을 제어한다
+  @Column(nullable = false, columnDefinition = "BIGINT DEFAULT 0")
+  private long likeCount = 0;
+
+  protected Post() {}
 
   public Post(Long id, String title, String content, User user, BoardType boardType) {
     this.id = id;
@@ -49,9 +61,19 @@ public class Post extends BaseTimeEntity {
   public String getContent() { return content; }
   public BoardType getBoardType() { return boardType; }
   public User getUser() { return user; }
+  public long getLikeCount() { return likeCount; }
 
   public void update(String title, String content) {
     this.title = title;
     this.content = content;
+  }
+
+  public void incrementLikeCount() {
+    this.likeCount++;
+  }
+
+  public void decrementLikeCount() {
+    // 좋아요 존재 여부를 먼저 검증한 후 호출하지만, 방어적으로 음수 방지
+    if (this.likeCount > 0) this.likeCount--;
   }
 }

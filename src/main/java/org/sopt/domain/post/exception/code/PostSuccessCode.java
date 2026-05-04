@@ -9,7 +9,8 @@ public enum PostSuccessCode implements BaseSuccessCode {
   POST_GET_ALL_SUCCESS(HttpStatus.OK, "POST2001", "게시글 전체 조회에 성공했습니다."),
   POST_GET_SUCCESS(HttpStatus.OK, "POST2002", "게시글 단건 조회에 성공했습니다."),
   POST_UPDATE_SUCCESS(HttpStatus.OK, "POST2003", "게시글 수정에 성공했습니다."),
-  POST_DELETE_SUCCESS(HttpStatus.OK, "POST2004", "게시글 삭제에 성공했습니다.");
+  POST_DELETE_SUCCESS(HttpStatus.OK, "POST2004", "게시글 삭제에 성공했습니다."),
+  POST_SEARCH_SUCCESS(HttpStatus.OK, "POST2005", "게시글 검색에 성공했습니다.");
 
   private final HttpStatus httpStatus;
   private final String code;

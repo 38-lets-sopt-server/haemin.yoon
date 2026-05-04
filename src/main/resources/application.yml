@@ -22,6 +22,7 @@ spring:
       hibernate:
         dialect: org.hibernate.dialect.MySQL8Dialect
         format_sql: true
+        use_sql_comments: true  # JPQL → SQL 변환 추적용 (PR 쿼리 비교 시 유용)
     show-sql: true
 
   springdoc:

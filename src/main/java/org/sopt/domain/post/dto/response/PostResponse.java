@@ -16,6 +16,8 @@ public record PostResponse(
     String content,
     @Schema(description = "작성자 닉네임", example = "솝트햄")
     String author,
+    @Schema(description = "좋아요 수", example = "42")
+    long likeCount,
     @Schema(description = "생성일시", example = "2024-04-26 11:00:00")
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "Asia/Seoul")
     LocalDateTime createdAt,
@@ -31,6 +33,7 @@ public record PostResponse(
         post.getTitle(),
         post.getContent(),
         post.getUser().getNickname(),
+        post.getLikeCount(),
         post.getCreatedAt(),
         post.getUpdatedAt(),
         post.getBoardType()
