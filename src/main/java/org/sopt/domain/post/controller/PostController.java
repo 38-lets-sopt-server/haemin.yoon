@@ -11,10 +11,12 @@ import org.sopt.domain.post.entity.BoardType;
 import org.sopt.domain.post.exception.code.PostSuccessCode;
 import org.sopt.domain.post.service.PostService;
 import org.sopt.global.response.BaseResponse;
+import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -26,6 +28,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @Tag(name = "Post", description = "게시글 관련 API")
+@Validated  // @RequestParam의 @NotBlank 등 제약 어노테이션을 활성화 (@Valid는 @RequestBody에만 동작)
 @RestController
 @RequestMapping("/api/v1/posts")
 public class PostController {
@@ -52,7 +55,7 @@ public class PostController {
   @GetMapping
   public ResponseEntity<BaseResponse<PostPageResponse>> getAllPosts(
       @RequestParam(required = false) BoardType boardType,
-      @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
+      @ParameterObject @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
   ) {
     PostPageResponse response = postService.getPosts(boardType, pageable);
     return ResponseEntity
@@ -81,6 +84,23 @@ public class PostController {
     return ResponseEntity
         .status(PostSuccessCode.POST_UPDATE_SUCCESS.getHttpStatus())
         .body(BaseResponse.onSuccess(PostSuccessCode.POST_UPDATE_SUCCESS, response));
+  }
+
+  // /search가 /{id}보다 먼저 선언되어야 "search"가 PathVariable id로 잘못 매핑되지 않는다
+  @Operation(
+      summary = "게시글 동적 검색",
+      description = "제목 키워드와 작성자 닉네임을 선택적으로 조합해 검색합니다. 둘 다 생략하면 전체 조회와 동일합니다."
+  )
+  @GetMapping("/search")
+  public ResponseEntity<BaseResponse<PostPageResponse>> searchPosts(
+      @RequestParam(required = false) String titleKeyword,
+      @RequestParam(required = false) String authorNickname,
+      @ParameterObject @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
+  ) {
+    PostPageResponse response = postService.searchPosts(titleKeyword, authorNickname, pageable);
+    return ResponseEntity
+        .status(PostSuccessCode.POST_SEARCH_SUCCESS.getHttpStatus())
+        .body(BaseResponse.onSuccess(PostSuccessCode.POST_SEARCH_SUCCESS, response));
   }
 
   @Operation(summary = "게시글 삭제", description = "게시글을 삭제합니다.")
