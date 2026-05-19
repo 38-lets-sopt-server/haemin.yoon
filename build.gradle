@@ -36,6 +36,10 @@ dependencies {
     annotationProcessor 'jakarta.persistence:jakarta.persistence-api'
     // test
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    // JWT
+    implementation 'com.auth0:java-jwt:4.4.0'
+    // Security
+    implementation 'org.springframework.boot:spring-boot-starter-security'
 }
 
 // QueryDSL이 생성하는 Q 클래스의 출력 경로를 IDE와 컴파일러가 소스로 인식하도록 등록
