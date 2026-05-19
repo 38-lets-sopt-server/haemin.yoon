@@ -1,18 +1,22 @@
 package org.sopt.domain.auth.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
+import org.sopt.domain.auth.dto.request.LoginRequest;
 import org.sopt.domain.auth.dto.request.ReissueRequest;
 import org.sopt.domain.auth.dto.response.TokenResponse;
 import org.sopt.domain.auth.exception.code.AuthSuccessCode;
 import org.sopt.domain.auth.service.AuthService;
 import org.sopt.global.response.BaseResponse;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @Tag(name = "Auth", description = "인증 관련 API")
@@ -32,10 +36,9 @@ public class AuthController {
     )
     @PostMapping("/login")
     public ResponseEntity<BaseResponse<TokenResponse>> login(
-            @RequestParam String email,
-            @RequestParam String password
+            @Valid @RequestBody LoginRequest request
     ) {
-        TokenResponse tokens = authService.login(email, password);
+        TokenResponse tokens = authService.login(request.email(), request.password());
         return ResponseEntity
                 .status(AuthSuccessCode.AUTH_LOGIN_SUCCESS.getHttpStatus())
                 .body(BaseResponse.onSuccess(AuthSuccessCode.AUTH_LOGIN_SUCCESS, tokens));
@@ -54,5 +57,31 @@ public class AuthController {
         return ResponseEntity
                 .status(AuthSuccessCode.AUTH_REISSUE_SUCCESS.getHttpStatus())
                 .body(BaseResponse.onSuccess(AuthSuccessCode.AUTH_REISSUE_SUCCESS, tokens));
+    }
+
+    @Operation(
+            summary = "로그아웃",
+            description = "DB에서 Refresh Token을 삭제하고, 현재 Access Token을 블랙리스트에 등록합니다. " +
+                          "블랙리스트에 등록된 토큰은 만료 전이라도 사용할 수 없습니다."
+    )
+    @SecurityRequirement(name = "bearerAuth")
+    @PostMapping("/logout")
+    public ResponseEntity<BaseResponse<Void>> logout(
+            Authentication authentication,
+            HttpServletRequest request
+    ) {
+        Long userId = Long.parseLong(authentication.getName());
+
+        // "Bearer " 접두사를 제거해 순수 토큰 문자열만 추출
+        // JwtAuthFilter에서 이미 검증된 토큰이므로 여기서는 파싱만 수행
+        String accessToken = request.getHeader(HttpHeaders.AUTHORIZATION)
+                .substring("Bearer ".length())
+                .trim();
+
+        authService.logout(userId, accessToken);
+
+        return ResponseEntity
+                .status(AuthSuccessCode.AUTH_LOGOUT_SUCCESS.getHttpStatus())
+                .body(BaseResponse.onSuccess(AuthSuccessCode.AUTH_LOGOUT_SUCCESS, null));
     }
 }

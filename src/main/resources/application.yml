@@ -6,6 +6,9 @@ spring:
     name: assignment
 
   data:
+    redis:
+      host: ${REDIS_HOST:localhost}  # 환경변수 없으면 localhost 기본값 사용
+      port: ${REDIS_PORT:6379}
     web:
       pageable:
         default-page-size: 10

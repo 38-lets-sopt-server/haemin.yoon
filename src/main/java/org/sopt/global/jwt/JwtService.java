@@ -68,4 +68,12 @@ public class JwtService {
             throw new IllegalArgumentException("JWT의 유저 정보가 올바르지 않습니다.");
         }
     }
+
+    /**
+     * 토큰의 만료 시각을 반환한다.
+     * 로그아웃 시 블랙리스트 TTL 설정에 사용 — 만료 이후에는 블랙리스트에 없어도 JWT 자체가 무효
+     */
+    public Instant getExpiry(String token) {
+        return JWT.require(algorithm).build().verify(token).getExpiresAtAsInstant();
+    }
 }

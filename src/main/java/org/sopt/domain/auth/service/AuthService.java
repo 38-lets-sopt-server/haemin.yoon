@@ -1,6 +1,7 @@
 package org.sopt.domain.auth.service;
 
 import com.auth0.jwt.exceptions.JWTVerificationException;
+import java.time.Instant;
 import org.sopt.domain.auth.dto.response.TokenResponse;
 import org.sopt.domain.auth.entity.RefreshToken;
 import org.sopt.domain.auth.exception.AuthException;
@@ -8,6 +9,7 @@ import org.sopt.domain.auth.exception.code.AuthErrorCode;
 import org.sopt.domain.auth.repository.RefreshTokenRepository;
 import org.sopt.domain.user.entity.User;
 import org.sopt.domain.user.repository.UserRepository;
+import org.sopt.global.jwt.AccessTokenBlacklistService;
 import org.sopt.global.jwt.JwtService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -21,6 +23,7 @@ public class AuthService {
     private final RefreshTokenRepository refreshTokenRepository;
     private final JwtService jwtService;
     private final PasswordEncoder passwordEncoder;
+    private final AccessTokenBlacklistService blacklistService;
 
     // 타이밍 공격 방지용 더미 해시
     // 이메일이 존재하지 않는 경우에도 BCrypt 연산을 동일하게 실행해 응답 시간을 일정하게 만듦
@@ -34,12 +37,14 @@ public class AuthService {
             UserRepository userRepository,
             RefreshTokenRepository refreshTokenRepository,
             JwtService jwtService,
-            PasswordEncoder passwordEncoder
+            PasswordEncoder passwordEncoder,
+            AccessTokenBlacklistService blacklistService
     ) {
         this.userRepository = userRepository;
         this.refreshTokenRepository = refreshTokenRepository;
         this.jwtService = jwtService;
         this.passwordEncoder = passwordEncoder;
+        this.blacklistService = blacklistService;
         this.dummyHash = passwordEncoder.encode(java.util.UUID.randomUUID().toString());
     }
 
@@ -78,6 +83,40 @@ public class AuthService {
         );
 
         return TokenResponse.of(accessToken, refreshToken);
+    }
+
+    /**
+     * 로그아웃: Refresh Token을 DB에서 삭제하고, Access Token을 블랙리스트에 등록한다.
+     *
+     * ── Refresh Token 삭제 ──────────────────────────────────────────────────
+     * DB에서 해당 유저의 Refresh Token을 제거해 재발급 경로를 차단한다.
+     * Refresh Token이 없더라도 에러를 던지지 않음 — 이미 로그아웃된 상태를 멱등(idempotent)하게 처리.
+     *
+     * ── Access Token 블랙리스트 ─────────────────────────────────────────────
+     * JWT는 stateless라 서버가 단독으로 무효화할 수 없다.
+     * 만료 전 토큰을 무력화하려면 서버 측에서 사용 금지 목록을 관리해야 한다.
+     * JwtAuthFilter가 매 요청마다 블랙리스트를 확인해 등록된 토큰을 차단한다.
+     *
+     * ── 클라이언트가 401을 감지해 로그인 페이지로 이동하는 흐름 ───────────────
+     * 1. 클라이언트가 API를 호출한다 (Access Token을 Authorization 헤더에 포함).
+     * 2. 서버가 401 (AUTH4010) 을 반환한다.
+     *    - Access Token 만료: JWTVerificationException → SecurityContext 미설정 → 401
+     *    - 블랙리스트 등록된 토큰: JwtAuthFilter에서 SecurityContext 미설정 → 401
+     * 3. 클라이언트는 401을 받으면 저장된 Refresh Token으로 /api/v1/auth/reissue를 호출한다.
+     * 4-a. 재발급 성공(200): 새 Access/Refresh Token을 저장하고 원래 요청을 재시도한다.
+     * 4-b. 재발급 실패(401): Refresh Token도 만료되었거나 로그아웃으로 삭제된 경우.
+     *      저장된 토큰을 모두 제거하고 로그인 페이지로 이동시킨다.
+     */
+    @Transactional
+    public void logout(Long userId, String accessToken) {
+        // Refresh Token 삭제 — 이미 없어도 예외 없이 정상 처리 (멱등성 보장)
+        refreshTokenRepository.deleteByUserId(userId);
+
+        // Access Token 블랙리스트 등록
+        // getExpiry()는 JWT 서명을 다시 검증하므로 위변조된 토큰을 그대로 등록하는 위험이 없음
+        // 만료 시각을 함께 저장해 두면 스케줄러가 만료된 항목을 주기적으로 정리할 수 있음
+        Instant expiresAt = jwtService.getExpiry(accessToken);
+        blacklistService.blacklist(accessToken, expiresAt);
     }
 
     /**

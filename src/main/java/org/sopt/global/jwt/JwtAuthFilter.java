@@ -7,6 +7,9 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.Collections;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.data.redis.RedisConnectionFailureException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -17,10 +20,14 @@ import org.springframework.web.filter.OncePerRequestFilter;
 @Component
 public class JwtAuthFilter extends OncePerRequestFilter {
 
-    private final JwtService jwtService;
+    private static final Logger log = LoggerFactory.getLogger(JwtAuthFilter.class);
 
-    public JwtAuthFilter(JwtService jwtService) {
+    private final JwtService jwtService;
+    private final AccessTokenBlacklistService blacklistService;
+
+    public JwtAuthFilter(JwtService jwtService, AccessTokenBlacklistService blacklistService) {
         this.jwtService = jwtService;
+        this.blacklistService = blacklistService;
     }
 
     @Override
@@ -35,6 +42,20 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             String token = header.substring("Bearer ".length()).trim();
             try {
                 Long userId = jwtService.verifyAndGetUserId(token);
+
+                // 서명·만료가 유효해도 로그아웃된 토큰이면 인증 거부
+                // 블랙리스트 체크는 JWT 검증 이후에 수행 — 위변조·만료 토큰은 어차피 위에서 걸러짐
+                try {
+                    if (blacklistService.isBlacklisted(token)) {
+                        filterChain.doFilter(request, response);
+                        return;
+                    }
+                } catch (RedisConnectionFailureException e) {
+                    // Redis 장애 시 fail-open: 블랙리스트 확인을 건너뛰고 인증을 허용한다.
+                    // fail-closed(인증 거부)로 바꾸면 보안은 강해지지만 Redis 장애가 전체 서비스 중단으로 이어짐.
+                    // 로그아웃 토큰이 일시적으로 유효해지는 위험보다 가용성을 우선하는 판단.
+                    log.warn("Redis 연결 실패로 블랙리스트 확인을 건너뜁니다: {}", e.getMessage());
+                }
 
                 // principal에 userId(String)를 담아 SecurityContext에 저장
                 // 이후 컨트롤러에서 authentication.getName()으로 userId를 꺼낼 수 있음

@@ -40,6 +40,8 @@ dependencies {
     implementation 'com.auth0:java-jwt:4.4.0'
     // Security
     implementation 'org.springframework.boot:spring-boot-starter-security'
+    // Redis — 블랙리스트 토큰 관리 (TTL 자동 만료, 다중 인스턴스 공유)
+    implementation 'org.springframework.boot:spring-boot-starter-data-redis'
 }
 
 // QueryDSL이 생성하는 Q 클래스의 출력 경로를 IDE와 컴파일러가 소스로 인식하도록 등록

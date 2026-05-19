@@ -1,0 +1,8 @@
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: assignment-redis
+    ports:
+      - "6379:6379"
+    # 재시작 시 자동으로 컨테이너를 다시 시작 (개발 환경용)
+    restart: unless-stopped
