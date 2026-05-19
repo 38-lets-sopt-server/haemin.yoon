@@ -19,14 +19,18 @@ public class User extends BaseTimeEntity {
   @Column(nullable = false, length = 20)
   private String nickname;
 
+  @Column(nullable = false)
+  private String password;
+
   @Column(nullable = false, unique = true)
   private String email;
   
   protected User() {}
 
-  public User(String nickname, String email) {
+  public User(String nickname, String email, String password) {
     this.nickname = nickname;
     this.email = email;
+    this.password = password;
   }
 
   public Long getId() {
@@ -39,5 +43,9 @@ public class User extends BaseTimeEntity {
 
   public String getEmail() {
     return this.email;
+  }
+
+  public String getPassword() {
+    return this.password;
   }
 }
