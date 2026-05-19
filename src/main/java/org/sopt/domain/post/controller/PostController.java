@@ -1,6 +1,7 @@
 package org.sopt.domain.post.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.sopt.domain.post.dto.request.CreatePostRequest;
@@ -16,6 +17,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -28,7 +30,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @Tag(name = "Post", description = "게시글 관련 API")
-@Validated  // @RequestParam의 @NotBlank 등 제약 어노테이션을 활성화 (@Valid는 @RequestBody에만 동작)
+@Validated
 @RestController
 @RequestMapping("/api/v1/posts")
 public class PostController {
@@ -39,12 +41,17 @@ public class PostController {
     this.postService = postService;
   }
 
-  @Operation(summary = "게시글 생성", description = "userId를 받아 새로운 게시글을 작성합니다.")
+  @Operation(summary = "게시글 생성", description = "Access Token으로 인증된 유저가 새로운 게시글을 작성합니다.")
+  @SecurityRequirement(name = "bearerAuth")
   @PostMapping
   public ResponseEntity<BaseResponse<PostResponse>> createPost(
-      @Valid @RequestBody CreatePostRequest request
+      @Valid @RequestBody CreatePostRequest request,
+      Authentication authentication
   ) {
-    PostResponse response = postService.createPost(request);
+    // SecurityConfig에서 POST /api/v1/posts는 authenticated() 대상이므로
+    // 이 시점에 authentication은 항상 유효한 JWT에서 추출된 값
+    Long userId = extractUserId(authentication);
+    PostResponse response = postService.createPost(userId, request);
 
     return ResponseEntity
         .status(PostSuccessCode.POST_CREATE_SUCCESS.getHttpStatus())
@@ -74,13 +81,16 @@ public class PostController {
         .body(BaseResponse.onSuccess(PostSuccessCode.POST_GET_SUCCESS, response));
   }
 
-  @Operation(summary = "게시글 수정", description = "기존 게시글의 제목과 내용을 수정합니다.")
+  @Operation(summary = "게시글 수정", description = "자신이 작성한 게시글의 제목과 내용을 수정합니다.")
+  @SecurityRequirement(name = "bearerAuth")
   @PutMapping("/{id}")
   public ResponseEntity<BaseResponse<PostResponse>> updatePost(
       @PathVariable Long id,
-      @Valid @RequestBody UpdatePostRequest request
+      @Valid @RequestBody UpdatePostRequest request,
+      Authentication authentication
   ) {
-    PostResponse response = postService.updatePost(id, request);
+    Long userId = extractUserId(authentication);
+    PostResponse response = postService.updatePost(id, userId, request);
     return ResponseEntity
         .status(PostSuccessCode.POST_UPDATE_SUCCESS.getHttpStatus())
         .body(BaseResponse.onSuccess(PostSuccessCode.POST_UPDATE_SUCCESS, response));
@@ -103,14 +113,22 @@ public class PostController {
         .body(BaseResponse.onSuccess(PostSuccessCode.POST_SEARCH_SUCCESS, response));
   }
 
-  @Operation(summary = "게시글 삭제", description = "게시글을 삭제합니다.")
+  @Operation(summary = "게시글 삭제", description = "자신이 작성한 게시글을 삭제합니다.")
+  @SecurityRequirement(name = "bearerAuth")
   @DeleteMapping("/{id}")
   public ResponseEntity<BaseResponse<Void>> deletePost(
-      @PathVariable Long id
+      @PathVariable Long id,
+      Authentication authentication
   ) {
-    postService.deletePost(id);
+    Long userId = extractUserId(authentication);
+    postService.deletePost(id, userId);
     return ResponseEntity
         .status(PostSuccessCode.POST_DELETE_SUCCESS.getHttpStatus())
         .body(BaseResponse.onSuccess(PostSuccessCode.POST_DELETE_SUCCESS, null));
+  }
+
+  // JWT 필터가 principal에 userId(String)를 저장하므로 getName()으로 꺼낸 뒤 Long으로 파싱
+  private Long extractUserId(Authentication authentication) {
+    return Long.parseLong(authentication.getName());
   }
 }

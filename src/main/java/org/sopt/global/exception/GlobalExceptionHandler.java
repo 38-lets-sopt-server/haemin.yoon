@@ -4,8 +4,10 @@ import jakarta.validation.ConstraintViolationException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import org.sopt.domain.auth.exception.code.AuthErrorCode;
 import org.sopt.domain.like.exception.code.LikeErrorCode;
 import org.sopt.domain.post.exception.code.PostErrorCode;
+import org.sopt.domain.user.exception.code.UserErrorCode;
 import org.sopt.global.exception.code.BaseErrorCode;
 import org.sopt.global.exception.code.GlobalErrorCode;
 import org.sopt.global.response.BaseResponse;
@@ -77,7 +79,10 @@ public class GlobalExceptionHandler {
 
   static {
     // 애플리케이션 실행 시 딱 한 번만 모든 메시지를 맵에 담아둠
-    List<Class<? extends BaseErrorCode>> enums = List.of(PostErrorCode.class, LikeErrorCode.class, GlobalErrorCode.class);
+    List<Class<? extends BaseErrorCode>> enums = List.of(
+        PostErrorCode.class, LikeErrorCode.class, GlobalErrorCode.class,
+        UserErrorCode.class, AuthErrorCode.class
+    );
     for (Class<? extends BaseErrorCode> enumClass : enums) {
       for (BaseErrorCode code : enumClass.getEnumConstants()) {
         errorCodeMap.put(code.getMessage(), code);

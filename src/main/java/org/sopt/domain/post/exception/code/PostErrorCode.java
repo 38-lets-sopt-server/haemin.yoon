@@ -7,10 +7,11 @@ import org.springframework.http.HttpStatus;
 public enum PostErrorCode implements BaseErrorCode {
 
   POST_NOT_FOUND(HttpStatus.NOT_FOUND, "POST4041", "해당 게시글을 찾을 수 없습니다."),
+  // 인증은 됐지만 자기 글이 아닌 경우 — 401(미인증)과 구분하기 위해 403 사용
+  POST_FORBIDDEN(HttpStatus.FORBIDDEN, "POST4031", "해당 게시글에 대한 권한이 없습니다."),
   POST_BAD_REQUEST(HttpStatus.BAD_REQUEST, "POST4000", "잘못된 게시글 요청입니다."),
   POST_TITLE_REQUIRED(HttpStatus.BAD_REQUEST, "POST4001", "제목은 필수 입력 항목입니다."),
   POST_CONTENT_REQUIRED(HttpStatus.BAD_REQUEST, "POST4002", "내용을 입력해주세요."),
-  POST_AUTHOR_REQUIRED(HttpStatus.BAD_REQUEST, "POST4003", "작성자 ID는 필수입니다."),
   POST_BOARD_TYPE_REQUIRED(HttpStatus.BAD_REQUEST, "POST4004", "게시판 종류는 필수입니다."),
   POST_SEARCH_KEYWORD_REQUIRED(HttpStatus.BAD_REQUEST, "POST4005", "검색어를 입력해주세요.");
 

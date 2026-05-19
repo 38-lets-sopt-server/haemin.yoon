@@ -17,10 +17,6 @@ public record CreatePostRequest(
     @NotBlank(message = "내용을 입력해주세요.")
     String content,
 
-    @Schema(description = "작성자 ID", example = "1")
-    @NotNull(message = "작성자 ID는 필수입니다.")
-    Long userId,
-
     @Schema(description = "게시판 종류", example = "FREE")
     @NotNull(message = "게시판 종류는 필수입니다.")
     BoardType boardType
