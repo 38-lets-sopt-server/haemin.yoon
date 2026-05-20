@@ -1,16 +1,14 @@
 package org.sopt.global.exception;
 
+import jakarta.annotation.PostConstruct;
 import jakarta.validation.ConstraintViolationException;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
-import org.sopt.domain.auth.exception.code.AuthErrorCode;
-import org.sopt.domain.like.exception.code.LikeErrorCode;
-import org.sopt.domain.post.exception.code.PostErrorCode;
-import org.sopt.domain.user.exception.code.UserErrorCode;
 import org.sopt.global.exception.code.BaseErrorCode;
-import org.sopt.global.exception.code.GlobalErrorCode;
 import org.sopt.global.response.BaseResponse;
+import org.springframework.beans.factory.config.BeanDefinition;
+import org.springframework.context.annotation.ClassPathScanningCandidateComponentProvider;
+import org.springframework.core.type.filter.AssignableTypeFilter;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -75,22 +73,30 @@ public class GlobalExceptionHandler {
         .body(BaseResponse.onFailure("COMMON4001", defaultMessage));
   }
 
-  private static final Map<String, BaseErrorCode> errorCodeMap = new HashMap<>();
+  private final Map<String, BaseErrorCode> errorCodeMap = new HashMap<>();
 
-  static {
-    // 애플리케이션 실행 시 딱 한 번만 모든 메시지를 맵에 담아둠
-    List<Class<? extends BaseErrorCode>> enums = List.of(
-        PostErrorCode.class, LikeErrorCode.class, GlobalErrorCode.class,
-        UserErrorCode.class, AuthErrorCode.class
-    );
-    for (Class<? extends BaseErrorCode> enumClass : enums) {
-      for (BaseErrorCode code : enumClass.getEnumConstants()) {
-        errorCodeMap.put(code.getMessage(), code);
-      }
+  // 애플리케이션 시작 시 org.sopt 하위의 BaseErrorCode 구현 enum을 자동 탐색해 맵에 등록
+  // 새 도메인 ErrorCode를 추가해도 이 파일을 수정할 필요 없음
+  @PostConstruct
+  public void initErrorCodeMap() {
+    ClassPathScanningCandidateComponentProvider scanner =
+        new ClassPathScanningCandidateComponentProvider(false);
+    scanner.addIncludeFilter(new AssignableTypeFilter(BaseErrorCode.class));
+
+    for (BeanDefinition bd : scanner.findCandidateComponents("org.sopt")) {
+      try {
+        Class<?> clazz = Class.forName(bd.getBeanClassName());
+        if (clazz.isEnum()) {
+          for (Object constant : clazz.getEnumConstants()) {
+            BaseErrorCode code = (BaseErrorCode) constant;
+            errorCodeMap.put(code.getMessage(), code);
+          }
+        }
+      } catch (ClassNotFoundException ignored) {}
     }
   }
 
   private BaseErrorCode findErrorCodeByMessage(String message) {
-    return errorCodeMap.get(message); // 이제 반복문 없이 O(1)으로 즉시 찾음!
+    return errorCodeMap.get(message);
   }
 }
