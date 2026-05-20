@@ -12,7 +12,9 @@ public enum AuthErrorCode implements BaseErrorCode {
     AUTH_USER_NOT_FOUND(HttpStatus.UNAUTHORIZED, "AUTH4012", "회원이 존재하지 않습니다."),
     AUTH_INVALID_TOKEN(HttpStatus.UNAUTHORIZED, "AUTH4013", "유효하지 않은 토큰입니다."),
     // 토큰이 만료/위변조된 경우와 구별 — DB에서 이미 삭제된(로그아웃/재발급된) 토큰
-    AUTH_REFRESH_TOKEN_NOT_FOUND(HttpStatus.UNAUTHORIZED, "AUTH4014", "Refresh Token이 존재하지 않습니다.");
+    AUTH_REFRESH_TOKEN_NOT_FOUND(HttpStatus.UNAUTHORIZED, "AUTH4014", "Refresh Token이 존재하지 않습니다."),
+    // Google 인가 코드가 유효하지 않거나 이미 사용된 경우
+    AUTH_OAUTH_PROVIDER_ERROR(HttpStatus.BAD_REQUEST, "AUTH4015", "Google 인증 처리 중 오류가 발생했습니다.");
 
     private final HttpStatus httpStatus;
     private final String code;

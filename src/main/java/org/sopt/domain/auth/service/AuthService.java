@@ -2,11 +2,14 @@ package org.sopt.domain.auth.service;
 
 import com.auth0.jwt.exceptions.JWTVerificationException;
 import java.time.Instant;
+import org.sopt.domain.auth.client.GoogleOAuthClient;
+import org.sopt.domain.auth.dto.response.GoogleUserInfoResponse;
 import org.sopt.domain.auth.dto.response.TokenResponse;
 import org.sopt.domain.auth.entity.RefreshToken;
 import org.sopt.domain.auth.exception.AuthException;
 import org.sopt.domain.auth.exception.code.AuthErrorCode;
 import org.sopt.domain.auth.repository.RefreshTokenRepository;
+import org.sopt.domain.user.entity.AuthProvider;
 import org.sopt.domain.user.entity.User;
 import org.sopt.domain.user.repository.UserRepository;
 import org.sopt.global.jwt.AccessTokenBlacklistService;
@@ -24,6 +27,7 @@ public class AuthService {
     private final JwtService jwtService;
     private final PasswordEncoder passwordEncoder;
     private final AccessTokenBlacklistService blacklistService;
+    private final GoogleOAuthClient googleOAuthClient;
 
     // 타이밍 공격 방지용 더미 해시
     // 이메일이 존재하지 않는 경우에도 BCrypt 연산을 동일하게 실행해 응답 시간을 일정하게 만듦
@@ -38,13 +42,15 @@ public class AuthService {
             RefreshTokenRepository refreshTokenRepository,
             JwtService jwtService,
             PasswordEncoder passwordEncoder,
-            AccessTokenBlacklistService blacklistService
+            AccessTokenBlacklistService blacklistService,
+            GoogleOAuthClient googleOAuthClient
     ) {
         this.userRepository = userRepository;
         this.refreshTokenRepository = refreshTokenRepository;
         this.jwtService = jwtService;
         this.passwordEncoder = passwordEncoder;
         this.blacklistService = blacklistService;
+        this.googleOAuthClient = googleOAuthClient;
         this.dummyHash = passwordEncoder.encode(java.util.UUID.randomUUID().toString());
     }
 
@@ -63,7 +69,9 @@ public class AuthService {
         // 이메일 존재 여부와 무관하게 항상 BCrypt를 실행해 응답 시간을 동일하게 만든다.
         User user = userRepository.findByEmail(email).orElse(null);
 
-        String hashToCompare = (user != null) ? user.getPassword() : dummyHash;
+        // OAuth 유저(password == null)도 dummyHash로 처리해 항상 BCrypt를 실행
+        // → 타이밍 공격 방지 유지, OAuth 유저의 이메일/비밀번호 로그인 시도 차단
+        String hashToCompare = (user != null && user.getPassword() != null) ? user.getPassword() : dummyHash;
 
         // matches(입력된 평문, DB의 BCrypt 해시)
         // BCrypt 해시 안에 솔트가 내장되어 있어 matches()가 솔트 추출 → 재해시 → 비교를 자동 처리
@@ -117,6 +125,54 @@ public class AuthService {
         // 만료 시각을 함께 저장해 두면 스케줄러가 만료된 항목을 주기적으로 정리할 수 있음
         Instant expiresAt = jwtService.getExpiry(accessToken);
         blacklistService.blacklist(accessToken, expiresAt);
+    }
+
+    /**
+     * Google OAuth 2.0 소셜 로그인.
+     *
+     * ── 흐름 ────────────────────────────────────────────────────────────────
+     * 1. 클라이언트로부터 받은 authorization code로 Google access token 교환
+     * 2. Google access token으로 유저 정보(이메일, 이름) 조회
+     * 3. 이메일로 기존 유저 조회 — 없으면 자동 회원가입(신규 유저 생성)
+     * 4. 우리 서버의 JWT 발급 후 반환
+     *
+     * ── 신규 vs 기존 유저 판별 ────────────────────────────────────────────
+     * 이메일을 기준으로 판별한다. 동일 이메일로 LOCAL 회원가입한 유저가 Google 로그인을
+     * 시도하면 같은 계정으로 로그인된다 (이메일 기반 계정 병합).
+     */
+    public String getGoogleAuthorizationUrl() {
+        return googleOAuthClient.buildAuthorizationUrl();
+    }
+
+    public String getGoogleCallbackUri() {
+        return googleOAuthClient.getCallbackUri();
+    }
+
+    @Transactional
+    public TokenResponse googleLogin(String code, String redirectUri) {
+        // 1단계: authorization code → Google access token
+        String googleAccessToken = googleOAuthClient.getAccessToken(code, redirectUri);
+
+        // 2단계: Google access token → 유저 정보
+        GoogleUserInfoResponse userInfo = googleOAuthClient.getUserInfo(googleAccessToken);
+
+        // 3단계: 이메일로 기존 유저 조회, 없으면 신규 생성
+        // orElseGet: 유저가 없을 때만 람다 실행 — save 쿼리가 불필요하게 실행되지 않음
+        User user = userRepository.findByEmail(userInfo.email())
+                .orElseGet(() -> userRepository.save(
+                        User.ofOAuth(userInfo.name(), userInfo.email(), AuthProvider.GOOGLE)
+                ));
+
+        // 4단계: JWT 발급 (로그인과 동일한 로직)
+        String accessToken = jwtService.generateAccessToken(user.getId(), user.getEmail());
+        String refreshToken = jwtService.generateRefreshToken(user.getId());
+
+        refreshTokenRepository.deleteByUserId(user.getId());
+        refreshTokenRepository.save(
+                RefreshToken.of(user.getId(), refreshToken, refreshTokenExpiresInSeconds)
+        );
+
+        return TokenResponse.of(accessToken, refreshToken);
     }
 
     /**

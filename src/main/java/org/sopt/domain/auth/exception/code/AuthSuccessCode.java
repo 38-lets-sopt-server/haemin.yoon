@@ -7,7 +7,8 @@ public enum AuthSuccessCode implements BaseSuccessCode {
 
     AUTH_LOGIN_SUCCESS(HttpStatus.OK, "AUTH2001", "로그인에 성공했습니다."),
     AUTH_REISSUE_SUCCESS(HttpStatus.OK, "AUTH2002", "토큰 재발급에 성공했습니다."),
-    AUTH_LOGOUT_SUCCESS(HttpStatus.OK, "AUTH2003", "로그아웃에 성공했습니다.");
+    AUTH_LOGOUT_SUCCESS(HttpStatus.OK, "AUTH2003", "로그아웃에 성공했습니다."),
+    AUTH_GOOGLE_LOGIN_SUCCESS(HttpStatus.OK, "AUTH2004", "Google 로그인에 성공했습니다.");
 
     private final HttpStatus httpStatus;
     private final String code;

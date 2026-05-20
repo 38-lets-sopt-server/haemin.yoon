@@ -49,6 +49,11 @@ public class SecurityConfig {
                 // 로그인·재발급은 토큰을 발급하는 진입점이므로 토큰 없이 접근 가능해야 함
                 .requestMatchers(HttpMethod.POST, "/api/v1/auth/login").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/v1/auth/reissue").permitAll()
+                // Google 인가 코드를 받아 JWT를 발급하는 진입점 — 토큰 없이 접근 가능해야 함
+                .requestMatchers(HttpMethod.POST, "/api/v1/auth/google").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/v1/auth/google/authorize").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/v1/auth/google/callback").permitAll()
+                .requestMatchers("/oauth-test.html").permitAll()
 
                 // 회원가입도 토큰 없이 접근 가능
                 .requestMatchers(HttpMethod.POST, "/api/v1/users").permitAll()
