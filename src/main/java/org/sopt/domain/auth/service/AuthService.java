@@ -144,10 +144,6 @@ public class AuthService {
         return googleOAuthClient.buildAuthorizationUrl();
     }
 
-    public String getGoogleCallbackUri() {
-        return googleOAuthClient.getCallbackUri();
-    }
-
     @Transactional
     public TokenResponse googleLogin(String code, String redirectUri) {
         // 1단계: authorization code → Google access token

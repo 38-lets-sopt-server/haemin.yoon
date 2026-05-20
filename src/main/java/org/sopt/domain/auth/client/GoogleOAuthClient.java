@@ -71,10 +71,6 @@ public class GoogleOAuthClient {
                 + "&scope=email%20profile";
     }
 
-    public String getCallbackUri() {
-        return callbackUri;
-    }
-
     /**
      * authorization code를 Google access token으로 교환한다.
      *

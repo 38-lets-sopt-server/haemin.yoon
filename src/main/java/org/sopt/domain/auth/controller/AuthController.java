@@ -21,7 +21,6 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @Tag(name = "Auth", description = "인증 관련 API")
@@ -85,18 +84,6 @@ public class AuthController {
     public void authorize(HttpServletResponse response) throws IOException {
         // client_id 등 민감한 값을 서버에서 조립해 프론트에 노출하지 않음
         response.sendRedirect(authService.getGoogleAuthorizationUrl());
-    }
-
-    // 프론트엔드가 없는 환경에서 Google OAuth를 테스트하기 위한 콜백 엔드포인트.
-    // 실제 서비스에서는 프론트가 code를 받아 POST /api/v1/auth/google을 호출하므로 이 엔드포인트 불필요.
-    @Operation(summary = "Google OAuth 콜백 (개발용)", hidden = true)
-    @GetMapping("/google/callback")
-    public ResponseEntity<BaseResponse<TokenResponse>> googleCallback(@RequestParam String code) {
-        String redirectUri = authService.getGoogleCallbackUri();
-        TokenResponse tokens = authService.googleLogin(code, redirectUri);
-        return ResponseEntity
-                .status(AuthSuccessCode.AUTH_GOOGLE_LOGIN_SUCCESS.getHttpStatus())
-                .body(BaseResponse.onSuccess(AuthSuccessCode.AUTH_GOOGLE_LOGIN_SUCCESS, tokens));
     }
 
     @Operation(

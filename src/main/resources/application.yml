@@ -56,4 +56,6 @@ oauth:
     # Google userinfo endpoint — access token으로 유저 정보(이메일, 이름) 조회
     user-info-uri: https://www.googleapis.com/oauth2/v2/userinfo
     # Google이 로그인 완료 후 돌아오는 우리 서버 주소 (Google Cloud Console에 등록된 값과 일치해야 함)
-    callback-uri: ${GOOGLE_CALLBACK_URI:http://localhost:8080/api/v1/auth/google/callback}
+    # 개발 환경: oauth-test.html이 프론트 역할을 하므로 이 페이지로 리다이렉트
+    # 운영 환경: 실제 프론트엔드 URL로 교체 (환경변수로 주입)
+    callback-uri: ${GOOGLE_CALLBACK_URI:http://localhost:8080/oauth-test.html}

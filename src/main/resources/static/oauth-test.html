@@ -70,7 +70,8 @@
     </div>
 
     <script>
-        // 콜백으로 돌아왔을 때 URL에 code가 있으면 서버에 자동 요청
+        // Google이 이 페이지로 리다이렉트하면 URL에 code가 포함됨
+        // 프론트엔드처럼 code + redirectUri를 POST /api/v1/auth/google로 전송
         const params = new URLSearchParams(window.location.search);
         const code = params.get('code');
         const error = params.get('error');
@@ -78,7 +79,14 @@
         if (error) {
             showResult(false, { error });
         } else if (code) {
-            fetch('/api/v1/auth/google/callback?code=' + encodeURIComponent(code))
+            fetch('/api/v1/auth/google', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    code: code,
+                    redirectUri: window.location.origin + window.location.pathname
+                })
+            })
                 .then(res => res.json())
                 .then(data => showResult(true, data))
                 .catch(err => showResult(false, { error: err.message }));
