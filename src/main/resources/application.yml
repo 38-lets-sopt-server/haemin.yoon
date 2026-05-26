@@ -5,6 +5,9 @@ spring:
   application:
     name: assignment
 
+  config:
+    import: classpath:config/application-secret.yml
+
   data:
     redis:
       host: ${REDIS_HOST:localhost}  # 환경변수 없으면 localhost 기본값 사용
