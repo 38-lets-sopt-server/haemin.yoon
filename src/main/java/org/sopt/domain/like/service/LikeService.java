@@ -11,7 +11,6 @@ import org.sopt.domain.post.repository.PostRepository;
 import org.sopt.domain.user.entity.User;
 import org.sopt.domain.user.repository.UserRepository;
 import org.sopt.global.exception.CustomException;
-import org.sopt.global.exception.code.GlobalErrorCode;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Recover;
@@ -49,20 +48,23 @@ public class LikeService {
   )
   @Transactional
   public void addLike(Long postId, Long userId) {
-    User user = userRepository.findById(userId)
-        .orElseThrow(() -> new CustomException(GlobalErrorCode.COMMON_BAD_REQUEST));
-
-    // version 필드가 있는 Post를 로딩 — 이 시점의 version이 커밋 시 기준값이 된다
-    Post post = postRepository.findById(postId)
-        .orElseThrow(() -> new PostException(PostErrorCode.POST_NOT_FOUND));
-
+    // ① 중복 체크를 가장 먼저: 이미 좋아요를 눌렀다면 Post/User 조회 없이 즉시 예외
     if (likeRepository.existsByUserIdAndPostId(userId, postId)) {
       throw new LikeException(LikeErrorCode.LIKE_ALREADY_EXISTS);
     }
 
+    // ② version 필드가 있는 Post 로딩 — 이 시점의 version이 커밋 시 기준값이 된다
+    Post post = postRepository.findById(postId)
+        .orElseThrow(() -> new PostException(PostErrorCode.POST_NOT_FOUND));
+
+    // ③ getReferenceById: SELECT 없이 userId를 ID로 가진 프록시 반환
+    // JWT 필터를 통과한 userId는 서버가 이미 검증한 값이므로 실제 존재가 보장됨
+    // findById()는 User 데이터 전체를 SELECT하지만, Like 저장에는 FK(user_id) 값만 필요
+    User user = userRepository.getReferenceById(userId);
+
     likeRepository.save(new Like(user, post));
-    // likeCount 변경 → JPA가 Post를 dirty 감지 → UPDATE post SET like_count=?, version=? WHERE id=? AND version=?
-    // 다른 트랜잭션이 먼저 커밋했다면 WHERE version=? 조건 불일치 → OptimisticLockingFailureException
+    // likeCount 변경 → JPA dirty 감지 → UPDATE post SET like_count=?, version=? WHERE id=? AND version=?
+    // 다른 트랜잭션이 먼저 커밋했다면 version 불일치 → OptimisticLockingFailureException
     post.incrementLikeCount();
   }
 

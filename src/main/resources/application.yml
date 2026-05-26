@@ -6,6 +6,9 @@ spring:
     name: assignment
 
   data:
+    redis:
+      host: ${REDIS_HOST:localhost}  # 환경변수 없으면 localhost 기본값 사용
+      port: ${REDIS_PORT:6379}
     web:
       pageable:
         default-page-size: 10
@@ -35,3 +38,24 @@ spring:
       groups-order: DESC                # 최근 생성된 API가 위로 오도록 정렬
     default-consume-media-type: application/json
     default-produce-media-type: application/json
+
+security:
+  jwt:
+    secret: ${JWT_SECRET_KEY}
+    access-token-expires-in-seconds: 1800     # 30분
+    refresh-token-expires-in-seconds: 1209600 # 2주
+
+oauth:
+  google:
+    client-id: ${GOOGLE_CLIENT_ID}
+    client-secret: ${GOOGLE_CLIENT_SECRET}
+    # 사용자를 Google 로그인 화면으로 보내는 URL
+    authorization-uri: https://accounts.google.com/o/oauth2/v2/auth
+    # Google token endpoint — authorization code를 access token으로 교환
+    token-uri: https://oauth2.googleapis.com/token
+    # Google userinfo endpoint — access token으로 유저 정보(이메일, 이름) 조회
+    user-info-uri: https://www.googleapis.com/oauth2/v2/userinfo
+    # Google이 로그인 완료 후 돌아오는 우리 서버 주소 (Google Cloud Console에 등록된 값과 일치해야 함)
+    # 개발 환경: oauth-test.html이 프론트 역할을 하므로 이 페이지로 리다이렉트
+    # 운영 환경: 실제 프론트엔드 URL로 교체 (환경변수로 주입)
+    callback-uri: ${GOOGLE_CALLBACK_URI:http://localhost:8080/oauth-test.html}
